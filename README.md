@@ -46,35 +46,52 @@ Daily AI Research Briefing — 2026-02-11 (JST)
 - リポジトリには含めず、GitHub Actions では `actions/cache` で永続化
 - arXiv ID は 72 時間、ブログ関連は 30 日、バッファは 3 日で自動削除
 
-## セットアップ
+## クイックスタート（3ステップ）
 
-### 1. Slack App / Bot Token の作成
+### 1. リポジトリを Fork
 
-1. [Slack API](https://api.slack.com/apps) にアクセスし、**Create New App** → **From scratch** を選択
-2. アプリ名（例: `Research Briefing Bot`）とワークスペースを指定して作成
-3. 左メニューから **OAuth & Permissions** を選択
-4. **Bot Token Scopes** に以下を追加:
-   - `chat:write` — メッセージ投稿
-   - `files:write` — ファイルアップロード
-5. ページ上部の **Install to Workspace** をクリックし、**Allow** で承認
-6. 表示される **Bot User OAuth Token**（`xoxb-...`）をコピー
-7. 通知先チャンネルの **Channel ID** を取得（チャンネル名を右クリック → チャンネル詳細の最下部に表示）
-8. 通知先チャンネルで `/invite @Research Briefing Bot`（アプリ名）を実行し、Bot をチャンネルに招待
+GitHub 上で **Fork** をクリックし、自分のアカウントにコピーします。
 
-### 2. GitHub Secrets の設定
+> 設定なしでもすぐに動作します。デフォルトで以下の企業・組織に関連する論文とブログを追跡します:
+>
+> **キーワード**: Google, DeepMind, Meta, FAIR, OpenAI, Anthropic
+> **ブログ RSS**: Google Research, DeepMind, OpenAI
+> **arXiv カテゴリ**: cs.AI, cs.LG, stat.ML
+>
+> カスタマイズしたい場合は [追跡対象のカスタマイズ](#追跡対象のカスタマイズ-configyml) を参照してください。
 
-1. GitHub リポジトリの **Settings** → **Secrets and variables** → **Actions** を開く
-2. 以下の 2 つの secret を追加:
-   - `SLACK_BOT_TOKEN` — 上記でコピーした Bot User OAuth Token
-   - `SLACK_CHANNEL_ID` — 通知先チャンネルの Channel ID
+### 2. Slack App を作成し、GitHub Secrets を登録
 
-### 3. GitHub Actions の有効化
+**Slack App の作成:**
 
-リポジトリを push すると `.github/workflows/notifier.yml` が認識され、自動的にスケジュール実行されます。
+1. [Slack API](https://api.slack.com/apps) → **Create New App** → **From scratch**
+2. アプリ名（例: `Research Briefing Bot`）とワークスペースを指定
+3. **OAuth & Permissions** → **Bot Token Scopes** に `chat:write` と `files:write` を追加
+4. **Install to Workspace** → **Allow**
+5. 表示される **Bot User OAuth Token**（`xoxb-...`）をコピー
+6. 通知先チャンネルで `/invite @Research Briefing Bot` を実行して Bot を招待
+7. チャンネル詳細の最下部から **Channel ID**（`C...`）をコピー
 
-- **毎時 :15** に収集ジョブが自動実行されます
-- **毎日 22:00 UTC（07:00 JST）** にブリーフィング配信ジョブが自動実行されます
-- **Actions** タブから **Run workflow** で手動実行も可能（mode を選択）
+**GitHub Secrets の登録:**
+
+Fork したリポジトリの **Settings** → **Secrets and variables** → **Actions** で以下を追加:
+
+| Secret 名 | 値 |
+|---|---|
+| `SLACK_BOT_TOKEN` | Bot User OAuth Token（`xoxb-...`） |
+| `SLACK_CHANNEL_ID` | 通知先チャンネルの Channel ID（`C...`） |
+
+### 3. 動作確認
+
+1. **Actions** タブ → 左サイドバーでワークフローを選択 → **Run workflow**
+2. mode: `collect` で実行（データ収集）
+3. 成功したら mode: `brief` で実行（Slack に投稿）
+4. Slack チャンネルにブリーフィングが届けば完了
+
+以降は自動でスケジュール実行されます:
+
+- **毎時 :15** — 収集ジョブ（`collect`）
+- **毎日 22:00 UTC（07:00 JST）** — ブリーフィング配信（`brief`）
 
 ## ローカル実行
 
@@ -150,6 +167,10 @@ MODE=brief python src/main.py
 ## 追跡対象のカスタマイズ (config.yml)
 
 `config.example.yml` をコピーして `config.yml` を作成し、追跡対象をカスタマイズできます。
+
+> **注意**: `config.yml` は `.gitignore` に含まれているため、ローカル実行専用です。
+> GitHub Actions（CI）では `config.example.yml` のデフォルト値が使われます。
+> CI でもカスタマイズしたい場合は `config.example.yml` を直接編集してください。
 
 ```bash
 cp config.example.yml config.yml
