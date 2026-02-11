@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import feedparser
+import requests
 from dateutil.parser import parse as parse_date
 
 from config import (
@@ -17,6 +19,12 @@ from config import (
     KEYWORD_PATTERNS,
     MAX_RESULTS,
 )
+
+logger = logging.getLogger(__name__)
+
+# Retry settings for transient arXiv API failures
+_MAX_RETRIES = 3
+_RETRY_DELAY_SECONDS = 5
 
 
 def _extract_arxiv_id(entry: dict[str, Any]) -> str:
@@ -72,6 +80,47 @@ def _build_query() -> str:
     return "+OR+".join(cat_parts)
 
 
+def _fetch_feed(url: str) -> feedparser.FeedParserDict:
+    """Fetch the arXiv Atom feed with retries on transient failures.
+
+    Uses ``requests`` for HTTP-level error handling, then passes the
+    response body to ``feedparser`` for XML parsing.
+    """
+    last_exc: Exception | None = None
+    for attempt in range(1, _MAX_RETRIES + 1):
+        try:
+            resp = requests.get(url, timeout=30)
+            resp.raise_for_status()
+        except requests.RequestException as exc:
+            last_exc = exc
+            logger.warning(
+                "arXiv API request failed (attempt %d/%d): %s",
+                attempt, _MAX_RETRIES, exc,
+            )
+            if attempt < _MAX_RETRIES:
+                time.sleep(_RETRY_DELAY_SECONDS * attempt)
+            continue
+
+        feed = feedparser.parse(resp.text)
+        if feed.bozo and not feed.entries:
+            last_exc = RuntimeError(
+                f"arXiv API returned malformed feed: {feed.bozo_exception}"
+            )
+            logger.warning(
+                "arXiv API returned unparseable response (attempt %d/%d): %s",
+                attempt, _MAX_RETRIES, feed.bozo_exception,
+            )
+            if attempt < _MAX_RETRIES:
+                time.sleep(_RETRY_DELAY_SECONDS * attempt)
+            continue
+
+        return feed
+
+    raise RuntimeError(
+        f"arXiv API failed after {_MAX_RETRIES} attempts: {last_exc}"
+    )
+
+
 def fetch_recent_papers() -> list[dict[str, Any]]:
     """Fetch papers from the last FETCH_HOURS and return matched ones.
 
@@ -81,10 +130,7 @@ def fetch_recent_papers() -> list[dict[str, Any]]:
     query = _build_query()
     url = f"{ARXIV_API_URL}?search_query={query}&sortBy=submittedDate&sortOrder=descending&max_results={MAX_RESULTS}"
 
-    feed = feedparser.parse(url)
-
-    if feed.bozo and not feed.entries:
-        raise RuntimeError(f"arXiv API returned malformed feed: {feed.bozo_exception}")
+    feed = _fetch_feed(url)
 
     cutoff = datetime.now(timezone.utc) - timedelta(hours=FETCH_HOURS)
     results: list[dict[str, Any]] = []

@@ -115,11 +115,6 @@ def run_brief() -> None:
     items = peek_buffer(state)
     total = len(items["blog_posts"]) + len(items["arxiv_papers"]) + len(items["linked_papers"])
 
-    if total == 0:
-        logger.info("No items in buffer. Skipping briefing.")
-        save_state(state)
-        return
-
     logger.info(
         "Building briefing: %d blogs, %d arXiv, %d linked.",
         len(items["blog_posts"]),

@@ -163,15 +163,15 @@ def build_daily_briefing_blocks(items: dict[str, list[Any]]) -> list[dict[str, A
     ]
 
     # --- Section A: High Priority (blog posts) ---
+    blocks.append({"type": "divider"})
+    header = f":fire:  *High Priority \u2014 Tech Blog Posts*  ({len(blog_posts)})"
+    blocks.append({
+        "type": "section",
+        "text": {"type": "mrkdwn", "text": header},
+    })
     if blog_posts:
-        blocks.append({"type": "divider"})
         shown = blog_posts[:_MAX_ITEMS_PER_SECTION]
         overflow = len(blog_posts) - len(shown)
-        header = f":fire:  *High Priority \u2014 Tech Blog Posts*  ({len(blog_posts)})"
-        blocks.append({
-            "type": "section",
-            "text": {"type": "mrkdwn", "text": header},
-        })
         for post in shown:
             blocks.append({
                 "type": "section",
@@ -182,17 +182,22 @@ def build_daily_briefing_blocks(items: dict[str, list[Any]]) -> list[dict[str, A
                 "type": "context",
                 "elements": [{"type": "mrkdwn", "text": f"_+{overflow} more blog posts_"}],
             })
+    else:
+        blocks.append({
+            "type": "context",
+            "elements": [{"type": "mrkdwn", "text": "_No new blog posts in this period._"}],
+        })
 
     # --- Section B: Notable arXiv (keyword-matched) ---
+    blocks.append({"type": "divider"})
+    header = f":test_tube:  *Notable arXiv Papers*  ({len(arxiv_papers)})"
+    blocks.append({
+        "type": "section",
+        "text": {"type": "mrkdwn", "text": header},
+    })
     if arxiv_papers:
-        blocks.append({"type": "divider"})
         shown = arxiv_papers[:_MAX_ITEMS_PER_SECTION]
         overflow = len(arxiv_papers) - len(shown)
-        header = f":test_tube:  *Notable arXiv Papers*  ({len(arxiv_papers)})"
-        blocks.append({
-            "type": "section",
-            "text": {"type": "mrkdwn", "text": header},
-        })
         for paper in shown:
             blocks.append({
                 "type": "section",
@@ -203,17 +208,22 @@ def build_daily_briefing_blocks(items: dict[str, list[Any]]) -> list[dict[str, A
                 "type": "context",
                 "elements": [{"type": "mrkdwn", "text": f"_+{overflow} more arXiv papers_"}],
             })
+    else:
+        blocks.append({
+            "type": "context",
+            "elements": [{"type": "mrkdwn", "text": "_No new keyword-matched papers in this period._"}],
+        })
 
     # --- Section C: Blog ↔ arXiv Updates (linked) ---
+    blocks.append({"type": "divider"})
+    header = f":link:  *Blog \u2194 arXiv Updates*  ({len(linked_papers)})"
+    blocks.append({
+        "type": "section",
+        "text": {"type": "mrkdwn", "text": header},
+    })
     if linked_papers:
-        blocks.append({"type": "divider"})
         shown = linked_papers[:_MAX_ITEMS_PER_SECTION]
         overflow = len(linked_papers) - len(shown)
-        header = f":link:  *Blog \u2194 arXiv Updates*  ({len(linked_papers)})"
-        blocks.append({
-            "type": "section",
-            "text": {"type": "mrkdwn", "text": header},
-        })
         for item in shown:
             blocks.append({
                 "type": "section",
@@ -224,6 +234,11 @@ def build_daily_briefing_blocks(items: dict[str, list[Any]]) -> list[dict[str, A
                 "type": "context",
                 "elements": [{"type": "mrkdwn", "text": f"_+{overflow} more linked papers_"}],
             })
+    else:
+        blocks.append({
+            "type": "context",
+            "elements": [{"type": "mrkdwn", "text": "_No new blog-linked papers in this period._"}],
+        })
 
     # --- Footer ---
     total = len(blog_posts) + len(arxiv_papers) + len(linked_papers)
@@ -322,9 +337,9 @@ def generate_briefing_markdown(items: dict[str, list[Any]]) -> str:
     lines.append("")
 
     # --- Section A: High Priority ---
+    lines.append(f"## \U0001f525 High Priority \u2014 Tech Blog Posts ({len(blog_posts)})")
+    lines.append("")
     if blog_posts:
-        lines.append(f"## \U0001f525 High Priority \u2014 Tech Blog Posts ({len(blog_posts)})")
-        lines.append("")
         for post in blog_posts[:_MAX_ITEMS_PER_SECTION]:
             title = post.get("title", "No title")
             url = post.get("url", "")
@@ -346,11 +361,14 @@ def generate_briefing_markdown(items: dict[str, list[Any]]) -> str:
         if overflow > 0:
             lines.append(f"_+{overflow} more blog posts_")
             lines.append("")
+    else:
+        lines.append("_No new blog posts in this period._")
+        lines.append("")
 
     # --- Section B: Notable arXiv ---
+    lines.append(f"## \U0001f9ea Notable arXiv Papers ({len(arxiv_papers)})")
+    lines.append("")
     if arxiv_papers:
-        lines.append(f"## \U0001f9ea Notable arXiv Papers ({len(arxiv_papers)})")
-        lines.append("")
         for paper in arxiv_papers[:_MAX_ITEMS_PER_SECTION]:
             title = paper.get("title", "No title")
             arxiv_id = paper.get("arxiv_id", "unknown")
@@ -367,11 +385,14 @@ def generate_briefing_markdown(items: dict[str, list[Any]]) -> str:
         if overflow > 0:
             lines.append(f"_+{overflow} more arXiv papers_")
             lines.append("")
+    else:
+        lines.append("_No new keyword-matched papers in this period._")
+        lines.append("")
 
     # --- Section C: Blog ↔ arXiv Updates ---
+    lines.append(f"## \U0001f517 Blog \u2194 arXiv Updates ({len(linked_papers)})")
+    lines.append("")
     if linked_papers:
-        lines.append(f"## \U0001f517 Blog \u2194 arXiv Updates ({len(linked_papers)})")
-        lines.append("")
         for item in linked_papers[:_MAX_ITEMS_PER_SECTION]:
             paper = item.get("paper", {})
             blog_info = item.get("blog_info", {})
@@ -393,6 +414,9 @@ def generate_briefing_markdown(items: dict[str, list[Any]]) -> str:
         if overflow > 0:
             lines.append(f"_+{overflow} more linked papers_")
             lines.append("")
+    else:
+        lines.append("_No new blog-linked papers in this period._")
+        lines.append("")
 
     # --- Footer ---
     total = len(blog_posts) + len(arxiv_papers) + len(linked_papers)
@@ -450,11 +474,11 @@ def _build_pdf_html(items: dict[str, list[Any]]) -> str:
     ]
 
     # --- Section A: High Priority ---
+    parts.append('<div class="section">')
+    parts.append(
+        f'<div class="section-head">High Priority &mdash; Tech Blog Posts ({len(blog_posts)})</div>'
+    )
     if blog_posts:
-        parts.append('<div class="section">')
-        parts.append(
-            f'<div class="section-head">High Priority &mdash; Tech Blog Posts ({len(blog_posts)})</div>'
-        )
         for post in blog_posts[:_MAX_ITEMS_PER_SECTION]:
             title = _html_escape(post.get("title", "No title"))
             url = post.get("url", "")
@@ -482,14 +506,16 @@ def _build_pdf_html(items: dict[str, list[Any]]) -> str:
         overflow = len(blog_posts) - _MAX_ITEMS_PER_SECTION
         if overflow > 0:
             parts.append(f'<p class="overflow">+{overflow} more blog posts</p>')
-        parts.append("</div>")
+    else:
+        parts.append('<p class="overflow">No new blog posts in this period.</p>')
+    parts.append("</div>")
 
     # --- Section B: Notable arXiv ---
+    parts.append('<div class="section">')
+    parts.append(
+        f'<div class="section-head">Notable arXiv Papers ({len(arxiv_papers)})</div>'
+    )
     if arxiv_papers:
-        parts.append('<div class="section">')
-        parts.append(
-            f'<div class="section-head">Notable arXiv Papers ({len(arxiv_papers)})</div>'
-        )
         for paper in arxiv_papers[:_MAX_ITEMS_PER_SECTION]:
             title = _html_escape(paper.get("title", "No title"))
             arxiv_id = paper.get("arxiv_id", "unknown")
@@ -515,14 +541,16 @@ def _build_pdf_html(items: dict[str, list[Any]]) -> str:
         overflow = len(arxiv_papers) - _MAX_ITEMS_PER_SECTION
         if overflow > 0:
             parts.append(f'<p class="overflow">+{overflow} more arXiv papers</p>')
-        parts.append("</div>")
+    else:
+        parts.append('<p class="overflow">No new keyword-matched papers in this period.</p>')
+    parts.append("</div>")
 
     # --- Section C: Blog <-> arXiv Updates ---
+    parts.append('<div class="section">')
+    parts.append(
+        f'<div class="section-head">Blog / arXiv Updates ({len(linked_papers)})</div>'
+    )
     if linked_papers:
-        parts.append('<div class="section">')
-        parts.append(
-            f'<div class="section-head">Blog / arXiv Updates ({len(linked_papers)})</div>'
-        )
         for item in linked_papers[:_MAX_ITEMS_PER_SECTION]:
             paper = item.get("paper", {})
             blog_info = item.get("blog_info", {})
@@ -559,7 +587,9 @@ def _build_pdf_html(items: dict[str, list[Any]]) -> str:
         overflow = len(linked_papers) - _MAX_ITEMS_PER_SECTION
         if overflow > 0:
             parts.append(f'<p class="overflow">+{overflow} more linked papers</p>')
-        parts.append("</div>")
+    else:
+        parts.append('<p class="overflow">No new blog-linked papers in this period.</p>')
+    parts.append("</div>")
 
     # --- Footer ---
     total = len(blog_posts) + len(arxiv_papers) + len(linked_papers)
