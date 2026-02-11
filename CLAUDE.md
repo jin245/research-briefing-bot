@@ -101,7 +101,7 @@
 
 ### 通知方式
 - 即時通知は行わない。毎朝 07:00 JST に1通の Daily Briefing を投稿する
-- 日中の収集ジョブ（毎時）は Slack への投稿を行わない
+- 日中の収集ジョブ（1日3回）は Slack への投稿を行わない
 
 ### ブリーフィングフォーマット
 - Slack Block Kit を使用し、1メッセージで投稿する
@@ -151,7 +151,7 @@
 ## GitHub Actions ルール
 
 - 実行モード:
-  - MODE=collect（収集）: cron 15 * * * *（毎時 :15）— arXiv・ブログを取得し state にバッファ蓄積。Slack 投稿なし
+  - MODE=collect（収集）: cron 0 6,14,21 * * *（1日3回: 06:00, 14:00, 21:00 UTC）— arXiv・ブログを取得し state にバッファ蓄積。Slack 投稿なし
   - MODE=brief（ブリーフィング）: cron 0 22 * * *（毎日 22:00 UTC / 07:00 JST）— バッファを集約し Slack に1通投稿
 - 手動実行: workflow_dispatch で mode を選択して実行可能
 - state.json は actions/cache/restore + actions/cache/save で永続化（コミットしない）

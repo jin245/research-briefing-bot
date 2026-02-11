@@ -2,7 +2,7 @@ name: Research Briefing Bot
 
 on:
   schedule:
-    - cron: "15 * * * *"   # Collect: hourly at :15
+    - cron: "0 6,14,21 * * *"  # Collect: 3x/day (06:00, 14:00, 21:00 UTC)
     - cron: "0 22 * * *"   # Briefing: daily 22:00 UTC = 07:00 JST
   workflow_dispatch:
     inputs:

@@ -6,7 +6,7 @@ Google / DeepMind / Meta / FAIR / OpenAI / Anthropic に関連する arXiv 新�
 
 ### Daily Briefing（毎朝1通のダイジェスト）
 
-日中の収集（毎時）と朝のブリーフィング配信（1日1回）を分離した2段階パイプラインで動作します。
+日中の収集（1日3回）と朝のブリーフィング配信（1日1回）を分離した2段階パイプラインで動作します。
 
 **収集モード（MODE=collect）**:
 - arXiv API (Atom feed) から cs.AI, cs.LG, stat.ML カテゴリの新着論文を取得
@@ -90,7 +90,7 @@ Fork したリポジトリの **Settings** → **Secrets and variables** → **A
 
 以降は自動でスケジュール実行されます:
 
-- **毎時 :15** — 収集ジョブ（`collect`）
+- **1日3回（06:00, 14:00, 21:00 UTC）** — 収集ジョブ（`collect`）
 - **毎日 22:00 UTC（07:00 JST）** — ブリーフィング配信（`brief`）
 
 ## ローカル実行
@@ -156,7 +156,7 @@ MODE=brief python src/main.py
 
 | モード | Cron | 時刻 | 動作 |
 |--------|------|------|------|
-| collect | `15 * * * *` | 毎時 :15 | arXiv・ブログ収集、バッファ蓄積 |
+| collect | `0 6,14,21 * * *` | 1日3回 (06:00, 14:00, 21:00 UTC) | arXiv・ブログ収集、バッファ蓄積 |
 | brief | `0 22 * * *` | 22:00 UTC (07:00 JST) | Daily Briefing を Slack に投稿 |
 
 - `workflow_dispatch` により手動実行も可能（mode を選択）
@@ -225,7 +225,7 @@ arxiv_categories:
 
 1. **SLACK_BOT_TOKEN / SLACK_CHANNEL_ID を確認**: GitHub Secrets に正しい値が設定されているか、Bot がチャンネルに招待されているか確認してください
 2. **収集ジョブが動いているか確認**: Actions ログで collect モードのジョブが正常に完了しているか確認してください
-3. **バッファが空**: 収集対象の新着がない場合、ブリーフィングはスキップされます
+3. **バッファが空**: 収集対象の新着がない場合でもブリーフィングは送信されます（各セクションに「該当なし」と表示）
 4. **state.json をリセット**: GitHub Actions の **Actions** → **Caches** からキャッシュを削除してください
 
 ### 収集ジョブがエラーになる
