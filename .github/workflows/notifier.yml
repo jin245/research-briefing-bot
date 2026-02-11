@@ -1,0 +1,78 @@
+name: Research Briefing Bot
+
+on:
+  schedule:
+    - cron: "15 * * * *"   # Collect: hourly at :15
+    - cron: "0 22 * * *"   # Briefing: daily 22:00 UTC = 07:00 JST
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run mode: collect (gather data) or brief (send briefing)"
+        required: true
+        default: "collect"
+        type: choice
+        options:
+          - collect
+          - brief
+
+permissions:
+  actions: write   # Required for gh cache delete
+
+concurrency:
+  group: notifier-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Restore state cache
+        uses: actions/cache/restore@v4
+        with:
+          path: state.json
+          key: state-v3-${{ github.ref_name }}
+          restore-keys:
+            - state-v3-${{ github.ref_name }}-
+            - state-v3-
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Determine mode
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "mode=${{ github.event.inputs.mode }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 22 * * *" ]; then
+            echo "mode=brief" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=collect" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run notifier
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: python src/main.py
+
+      - name: Delete old state cache
+        if: always()
+        run: gh cache delete "state-v3-${{ github.ref_name }}" || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Save state cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: state.json
+          key: state-v3-${{ github.ref_name }}

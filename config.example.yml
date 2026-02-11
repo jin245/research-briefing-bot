@@ -1,0 +1,41 @@
+# config.example.yml — 追跡対象の設定テンプレート
+#
+# 使い方:
+#   cp config.example.yml config.yml
+#   config.yml を編集して追跡対象をカスタマイズ
+#
+# pattern には通常の文字列を記述してください。
+# 自動的に単語境界マッチ（\b...\b）と re.escape が適用されます。
+# 高度な正規表現を使いたい場合は raw_regex: true を指定してください。
+
+keywords:
+  - label: "Google"
+    pattern: "Google"
+  - label: "DeepMind"
+    pattern: "DeepMind"
+  - label: "Meta"
+    pattern: "Meta"
+    case_sensitive: true
+  - label: "FAIR"
+    pattern: "FAIR"
+    case_sensitive: true
+  - label: "Facebook AI Research"
+    pattern: "Facebook AI Research"
+    display_as: "FAIR"
+  - label: "OpenAI"
+    pattern: "OpenAI"
+  - label: "Anthropic"
+    pattern: "Anthropic"
+
+blog_feeds:
+  - source: "Google Research"
+    url: "https://blog.research.google/feeds/posts/default?alt=rss"
+  - source: "DeepMind"
+    url: "https://deepmind.google/blog/rss.xml"
+  - source: "OpenAI"
+    url: "https://openai.com/blog/rss.xml"
+
+arxiv_categories:
+  - "cs.AI"
+  - "cs.LG"
+  - "stat.ML"
