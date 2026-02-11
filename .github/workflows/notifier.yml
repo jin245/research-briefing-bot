@@ -34,9 +34,9 @@ jobs:
         with:
           path: state.json
           key: state-v3-${{ github.ref_name }}
-          restore-keys:
-            - state-v3-${{ github.ref_name }}-
-            - state-v3-
+          restore-keys: |
+            state-v3-${{ github.ref_name }}-
+            state-v3-
 
       - name: Set up Python
         uses: actions/setup-python@v5
