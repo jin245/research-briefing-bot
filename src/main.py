@@ -66,39 +66,51 @@ def run_collect() -> None:
         logger.info("Saved %d arXiv ID mappings from blog posts.", total_arxiv_from_blogs)
 
     # --- arXiv ---
-    logger.info("Fetching recent papers from arXiv...")
-    papers = fetch_recent_papers()
-    logger.info("Found %d matching papers in the last 48 hours.", len(papers))
+    arxiv_ok = True
+    try:
+        logger.info("Fetching recent papers from arXiv...")
+        papers = fetch_recent_papers()
+        logger.info("Found %d matching papers in the last 48 hours.", len(papers))
 
-    new_papers = filter_new_papers(papers, state)
-    logger.info("%d new papers to buffer.", len(new_papers))
+        new_papers = filter_new_papers(papers, state)
+        logger.info("%d new papers to buffer.", len(new_papers))
 
-    linked_items: list[dict] = []
-    keyword_papers: list[dict] = []
+        linked_items: list[dict] = []
+        keyword_papers: list[dict] = []
 
-    for paper in new_papers:
-        blog_info = lookup_blog_for_arxiv(state, paper["arxiv_id"])
-        if blog_info:
-            linked_items.append({"paper": paper, "blog_info": blog_info})
-            mark_blog_arxiv_linked(state, paper["arxiv_id"])
-        else:
-            keyword_papers.append(paper)
+        for paper in new_papers:
+            blog_info = lookup_blog_for_arxiv(state, paper["arxiv_id"])
+            if blog_info:
+                linked_items.append({"paper": paper, "blog_info": blog_info})
+                mark_blog_arxiv_linked(state, paper["arxiv_id"])
+            else:
+                keyword_papers.append(paper)
 
-    if linked_items:
-        buffer_linked_papers(state, linked_items)
-        logger.info("Buffered %d blog-linked papers.", len(linked_items))
+        if linked_items:
+            buffer_linked_papers(state, linked_items)
+            logger.info("Buffered %d blog-linked papers.", len(linked_items))
 
-    if keyword_papers:
-        buffer_arxiv_papers(state, keyword_papers)
-        logger.info("Buffered %d keyword-matched papers.", len(keyword_papers))
+        if keyword_papers:
+            buffer_arxiv_papers(state, keyword_papers)
+            logger.info("Buffered %d keyword-matched papers.", len(keyword_papers))
 
-    # Mark arXiv IDs as notified (dedup for future collect runs) and prune
-    all_ids = [p["arxiv_id"] for p in new_papers]
-    if all_ids:
-        mark_notified(state, all_ids)
+        # Mark arXiv IDs as notified (dedup for future collect runs) and prune
+        all_ids = [p["arxiv_id"] for p in new_papers]
+        if all_ids:
+            mark_notified(state, all_ids)
+    except Exception:
+        arxiv_ok = False
+        logger.warning(
+            "arXiv fetch failed; blog data will still be saved. "
+            "arXiv papers will be retried on next collect run.",
+            exc_info=True,
+        )
 
     save_state(state)
-    logger.info("Collect done. State saved.")
+    if arxiv_ok:
+        logger.info("Collect done. State saved.")
+    else:
+        logger.info("Collect done (arXiv skipped). Blog data saved.")
 
 
 def run_brief() -> None:

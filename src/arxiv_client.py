@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 # Retry settings for transient arXiv API failures
 _MAX_RETRIES = 3
-_RETRY_DELAY_SECONDS = 5
+_RETRY_DELAY_SECONDS = 30
 
 
 def _extract_arxiv_id(entry: dict[str, Any]) -> str:
@@ -93,12 +93,22 @@ def _fetch_feed(url: str) -> feedparser.FeedParserDict:
             resp.raise_for_status()
         except requests.RequestException as exc:
             last_exc = exc
+            # Respect Retry-After header on 429 responses
+            retry_after: float | None = None
+            if isinstance(exc, requests.HTTPError) and exc.response is not None:
+                raw = exc.response.headers.get("Retry-After")
+                if raw is not None:
+                    try:
+                        retry_after = float(raw)
+                    except (ValueError, TypeError):
+                        retry_after = None
+            delay = max(retry_after or 0, _RETRY_DELAY_SECONDS * attempt)
             logger.warning(
-                "arXiv API request failed (attempt %d/%d): %s",
-                attempt, _MAX_RETRIES, exc,
+                "arXiv API request failed (attempt %d/%d, retry in %.0fs): %s",
+                attempt, _MAX_RETRIES, delay, exc,
             )
             if attempt < _MAX_RETRIES:
-                time.sleep(_RETRY_DELAY_SECONDS * attempt)
+                time.sleep(delay)
             continue
 
         feed = feedparser.parse(resp.text)
