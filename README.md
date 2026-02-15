@@ -1,6 +1,6 @@
 # Research Briefing Bot
 
-Google / DeepMind / Meta / FAIR / OpenAI / Anthropic に関連する arXiv 新着論文と技術ブログを自動収集し、毎朝 07:00 JST に Daily Briefing として Slack に投稿する GitHub Actions ベースのボットです。Block Kit メッセージに加え、同内容の Markdown/PDF ファイルをスレッドにアップロードします。
+Google / DeepMind / Meta / FAIR / OpenAI / Anthropic に関連する arXiv 新着論文と技術ブログを自動収集し、毎朝 07:00 JST に Daily Briefing として Slack に投稿する GitHub Actions ベースのボットです。AI Safety 研究機関（ARC, CAIS, METR）のブログ/ニュースレターも定点観測します。Block Kit メッセージに加え、同内容の Markdown/PDF ファイルをスレッドにアップロードします。
 
 ## 機能
 
@@ -11,6 +11,7 @@ Google / DeepMind / Meta / FAIR / OpenAI / Anthropic に関連する arXiv 新�
 **収集モード（MODE=collect）**:
 - arXiv API (Atom feed) から cs.AI, cs.LG, stat.ML カテゴリの新着論文を取得
 - Google Research, DeepMind, OpenAI の技術ブログ RSS を監視
+- ARC, CAIS, METR の AI Safety ブログ/ニュースレター RSS を監視
 - 収集したアイテムを `state.json` の daily_buffer に蓄積（Slack への投稿は行わない）
 
 **ブリーフィング配信モード（MODE=brief）**:
@@ -31,6 +32,9 @@ Daily AI Research Briefing — 2026-02-11 (JST)
 ────────────────────────────────────────
 🔗 Blog ↔ arXiv Updates (2)
    ブログで言及された arXiv 論文のクロスリファレンス
+────────────────────────────────────────
+🛡️ AI Safety Watch (1)
+   AI Safety 研究機関ブログの新着（ARC, CAIS, METR）
 ────────────────────────────────────────
 📊 cs.AI, cs.LG, stat.ML · Past 48h · 件数サマリ
 ```
@@ -56,6 +60,7 @@ GitHub 上で **Fork** をクリックし、自分のアカウントにコピー
 >
 > **キーワード**: Google, DeepMind, Meta, FAIR, OpenAI, Anthropic
 > **ブログ RSS**: Google Research, DeepMind, OpenAI
+> **Safety RSS**: ARC, CAIS, METR
 > **arXiv カテゴリ**: cs.AI, cs.LG, stat.ML
 >
 > カスタマイズしたい場合は [追跡対象のカスタマイズ](#追跡対象のカスタマイズ-configyml) を参照してください。
@@ -121,7 +126,7 @@ MODE=brief python src/main.py
 ├── src/
 │   ├── main.py            # エントリーポイント（MODE分岐）
 │   ├── arxiv_client.py    # arXiv API クライアント
-│   ├── blog_client.py     # 技術ブログ RSS クライアント
+│   ├── blog_client.py     # 技術ブログ / AI Safety ブログ RSS クライアント
 │   ├── slack.py           # Daily Briefing Block Kit 生成・送信・PDF 生成
 │   ├── state.py           # 状態管理 (state.json + daily_buffer)
 │   └── config.py          # 設定定数（config.yml をロード）
@@ -146,7 +151,8 @@ MODE=brief python src/main.py
     "YYYY-MM-DD": {
       "blog_posts": [ { "title": "...", "url": "...", "source": "...", ... } ],
       "arxiv_papers": [ { "arxiv_id": "...", "title": "...", ... } ],
-      "linked_papers": [ { "paper": {...}, "blog_info": {...} } ]
+      "linked_papers": [ { "paper": {...}, "blog_info": {...} } ],
+      "safety_posts": [ { "title": "...", "url": "...", "source": "...", ... } ]
     }
   }
 }
@@ -198,6 +204,15 @@ keywords:
 blog_feeds:
   - source: "Google Research"
     url: "https://blog.research.google/feeds/posts/default?alt=rss"
+
+# AI Safety ブログ/ニュースレター RSS フィード
+safety_feeds:
+  - source: "ARC"
+    url: "https://www.alignment.org/blog/rss"
+  - source: "CAIS"
+    url: "https://newsletter.safe.ai/feed"
+  - source: "METR"
+    url: "https://metr.substack.com/feed"
 
 # arXiv カテゴリ
 arxiv_categories:
