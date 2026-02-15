@@ -35,6 +35,14 @@ blog_feeds:
   - source: "OpenAI"
     url: "https://openai.com/blog/rss.xml"
 
+safety_feeds:
+  - source: "ARC"
+    url: "https://www.alignment.org/blog/rss"
+  - source: "CAIS"
+    url: "https://newsletter.safe.ai/feed"
+  - source: "METR"
+    url: "https://metr.substack.com/feed"
+
 arxiv_categories:
   - "cs.AI"
   - "cs.LG"

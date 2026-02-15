@@ -150,6 +150,7 @@ def build_daily_briefing_blocks(items: dict[str, list[Any]]) -> list[dict[str, A
     blog_posts = items.get("blog_posts", [])
     arxiv_papers = items.get("arxiv_papers", [])
     linked_papers = items.get("linked_papers", [])
+    safety_posts = items.get("safety_posts", [])
 
     blocks: list[dict[str, Any]] = [
         {
@@ -240,8 +241,34 @@ def build_daily_briefing_blocks(items: dict[str, list[Any]]) -> list[dict[str, A
             "elements": [{"type": "mrkdwn", "text": "_No new blog-linked papers in this period._"}],
         })
 
+    # --- Section D: AI Safety Watch ---
+    blocks.append({"type": "divider"})
+    header = f":shield:  *AI Safety Watch*  ({len(safety_posts)})"
+    blocks.append({
+        "type": "section",
+        "text": {"type": "mrkdwn", "text": header},
+    })
+    if safety_posts:
+        shown = safety_posts[:_MAX_ITEMS_PER_SECTION]
+        overflow = len(safety_posts) - len(shown)
+        for post in shown:
+            blocks.append({
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": _build_blog_item(post)},
+            })
+        if overflow > 0:
+            blocks.append({
+                "type": "context",
+                "elements": [{"type": "mrkdwn", "text": f"_+{overflow} more safety posts_"}],
+            })
+    else:
+        blocks.append({
+            "type": "context",
+            "elements": [{"type": "mrkdwn", "text": "_No new AI safety posts in this period._"}],
+        })
+
     # --- Footer ---
-    total = len(blog_posts) + len(arxiv_papers) + len(linked_papers)
+    total = len(blog_posts) + len(arxiv_papers) + len(linked_papers) + len(safety_posts)
     cats = ", ".join(ARXIV_CATEGORIES)
     blocks.append({"type": "divider"})
     blocks.append({
@@ -252,7 +279,7 @@ def build_daily_briefing_blocks(items: dict[str, list[Any]]) -> list[dict[str, A
                 "text": (
                     f":bar_chart:  {cats} \u00b7 Past {FETCH_HOURS}h \u00b7 "
                     f"{len(blog_posts)} blogs, {len(arxiv_papers)} arXiv, "
-                    f"{len(linked_papers)} linked \u00b7 {total} total"
+                    f"{len(linked_papers)} linked, {len(safety_posts)} safety \u00b7 {total} total"
                 ),
             },
         ],
@@ -331,6 +358,7 @@ def generate_briefing_markdown(items: dict[str, list[Any]]) -> str:
     blog_posts = items.get("blog_posts", [])
     arxiv_papers = items.get("arxiv_papers", [])
     linked_papers = items.get("linked_papers", [])
+    safety_posts = items.get("safety_posts", [])
 
     lines: list[str] = []
     lines.append(f"# Daily AI Research Briefing \u2014 {date_str} (JST)")
@@ -418,15 +446,44 @@ def generate_briefing_markdown(items: dict[str, list[Any]]) -> str:
         lines.append("_No new blog-linked papers in this period._")
         lines.append("")
 
+    # --- Section D: AI Safety Watch ---
+    lines.append(f"## \U0001f6e1\ufe0f AI Safety Watch ({len(safety_posts)})")
+    lines.append("")
+    if safety_posts:
+        for post in safety_posts[:_MAX_ITEMS_PER_SECTION]:
+            title = post.get("title", "No title")
+            url = post.get("url", "")
+            source = post.get("source", "Blog")
+            published = post.get("published", "")[:10]
+            lines.append(f"- **[{title}]({url})**")
+            lines.append(f"  {source} \u00b7 {published}")
+            arxiv_ids = post.get("arxiv_ids", [])
+            if arxiv_ids:
+                links = ", ".join(
+                    f"[{aid}](https://arxiv.org/abs/{aid})" for aid in arxiv_ids[:3]
+                )
+                lines.append(f"  arXiv: {links}")
+            summary = post.get("summary", "")
+            if summary:
+                lines.append(f"  {_truncate(summary, _SUMMARY_PREVIEW_LEN)}")
+            lines.append("")
+        overflow = len(safety_posts) - _MAX_ITEMS_PER_SECTION
+        if overflow > 0:
+            lines.append(f"_+{overflow} more safety posts_")
+            lines.append("")
+    else:
+        lines.append("_No new AI safety posts in this period._")
+        lines.append("")
+
     # --- Footer ---
-    total = len(blog_posts) + len(arxiv_papers) + len(linked_papers)
+    total = len(blog_posts) + len(arxiv_papers) + len(linked_papers) + len(safety_posts)
     cats = ", ".join(ARXIV_CATEGORIES)
     lines.append("---")
     lines.append("")
     lines.append(
         f"{cats} \u00b7 Past {FETCH_HOURS}h \u00b7 "
         f"{len(blog_posts)} blogs, {len(arxiv_papers)} arXiv, "
-        f"{len(linked_papers)} linked \u00b7 {total} total"
+        f"{len(linked_papers)} linked, {len(safety_posts)} safety \u00b7 {total} total"
     )
     lines.append("")
 
@@ -466,6 +523,7 @@ def _build_pdf_html(items: dict[str, list[Any]]) -> str:
     blog_posts = items.get("blog_posts", [])
     arxiv_papers = items.get("arxiv_papers", [])
     linked_papers = items.get("linked_papers", [])
+    safety_posts = items.get("safety_posts", [])
 
     parts: list[str] = [
         '<!DOCTYPE html><html><head><meta charset="utf-8">',
@@ -591,13 +649,50 @@ def _build_pdf_html(items: dict[str, list[Any]]) -> str:
         parts.append('<p class="overflow">No new blog-linked papers in this period.</p>')
     parts.append("</div>")
 
+    # --- Section D: AI Safety Watch ---
+    parts.append('<div class="section">')
+    parts.append(
+        f'<div class="section-head">AI Safety Watch ({len(safety_posts)})</div>'
+    )
+    if safety_posts:
+        for post in safety_posts[:_MAX_ITEMS_PER_SECTION]:
+            title = _html_escape(post.get("title", "No title"))
+            url = post.get("url", "")
+            source = _html_escape(post.get("source", "Blog"))
+            published = post.get("published", "")[:10]
+            arxiv_ids = post.get("arxiv_ids", [])
+            summary = post.get("summary", "")
+
+            parts.append('<div class="card">')
+            parts.append(f'<p class="card-title"><a href="{url}">{title}</a></p>')
+            meta = f"{source} &middot; {published}"
+            if arxiv_ids:
+                links = ", ".join(
+                    f'<a href="https://arxiv.org/abs/{aid}">{aid}</a>'
+                    for aid in arxiv_ids[:3]
+                )
+                meta += f" &middot; arXiv: {links}"
+            parts.append(f'<p class="card-meta">{meta}</p>')
+            if summary:
+                parts.append(
+                    f'<p class="card-summary">{_html_escape(_truncate(summary, _SUMMARY_PREVIEW_LEN))}</p>'
+                )
+            parts.append("</div>")
+
+        overflow = len(safety_posts) - _MAX_ITEMS_PER_SECTION
+        if overflow > 0:
+            parts.append(f'<p class="overflow">+{overflow} more safety posts</p>')
+    else:
+        parts.append('<p class="overflow">No new AI safety posts in this period.</p>')
+    parts.append("</div>")
+
     # --- Footer ---
-    total = len(blog_posts) + len(arxiv_papers) + len(linked_papers)
+    total = len(blog_posts) + len(arxiv_papers) + len(linked_papers) + len(safety_posts)
     cats = ", ".join(ARXIV_CATEGORIES)
     parts.append(
         f'<div class="footer">{cats} &middot; Past {FETCH_HOURS}h &middot; '
         f"{len(blog_posts)} blogs, {len(arxiv_papers)} arXiv, "
-        f"{len(linked_papers)} linked &middot; {total} total</div>"
+        f"{len(linked_papers)} linked, {len(safety_posts)} safety &middot; {total} total</div>"
     )
 
     parts.append("</body></html>")

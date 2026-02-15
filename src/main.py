@@ -15,7 +15,7 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 
 from arxiv_client import fetch_recent_papers
-from blog_client import fetch_blog_posts
+from blog_client import fetch_blog_posts, fetch_safety_posts
 from config import OUT_DIR
 from slack import (
     build_daily_briefing_blocks,
@@ -29,6 +29,7 @@ from state import (
     buffer_arxiv_papers,
     buffer_blog_posts,
     buffer_linked_papers,
+    buffer_safety_posts,
     filter_new_blog_posts,
     filter_new_papers,
     load_state,
@@ -64,6 +65,20 @@ def run_collect() -> None:
         buffer_blog_posts(state, new_blog_posts)
         total_arxiv_from_blogs = sum(len(p.get("arxiv_ids", [])) for p in new_blog_posts)
         logger.info("Saved %d arXiv ID mappings from blog posts.", total_arxiv_from_blogs)
+
+    # --- Safety RSS ---
+    logger.info("Fetching safety RSS feeds...")
+    safety_posts = fetch_safety_posts()
+    logger.info("Found %d recent safety posts.", len(safety_posts))
+
+    new_safety_posts = filter_new_blog_posts(safety_posts, state)
+    logger.info("%d new safety posts to buffer.", len(new_safety_posts))
+
+    if new_safety_posts:
+        mark_blog_notified(state, new_safety_posts)
+        buffer_safety_posts(state, new_safety_posts)
+        total_arxiv_from_safety = sum(len(p.get("arxiv_ids", [])) for p in new_safety_posts)
+        logger.info("Saved %d arXiv ID mappings from safety posts.", total_arxiv_from_safety)
 
     # --- arXiv ---
     arxiv_ok = True
@@ -125,13 +140,19 @@ def run_brief() -> None:
 
     # Phase 1: peek — read without clearing
     items = peek_buffer(state)
-    total = len(items["blog_posts"]) + len(items["arxiv_papers"]) + len(items["linked_papers"])
+    total = (
+        len(items["blog_posts"])
+        + len(items["arxiv_papers"])
+        + len(items["linked_papers"])
+        + len(items["safety_posts"])
+    )
 
     logger.info(
-        "Building briefing: %d blogs, %d arXiv, %d linked.",
+        "Building briefing: %d blogs, %d arXiv, %d linked, %d safety.",
         len(items["blog_posts"]),
         len(items["arxiv_papers"]),
         len(items["linked_papers"]),
+        len(items["safety_posts"]),
     )
 
     # Phase 2: send — raises on failure, buffer untouched
