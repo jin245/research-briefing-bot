@@ -26,6 +26,7 @@ _EMPTY_DAY: dict[str, list[Any]] = {
     "blog_posts": [],
     "arxiv_papers": [],
     "linked_papers": [],
+    "safety_posts": [],
 }
 
 
@@ -185,6 +186,17 @@ def buffer_blog_posts(state: dict[str, Any], posts: list[dict[str, Any]]) -> Non
             existing.add(post["url"])
 
 
+def buffer_safety_posts(state: dict[str, Any], posts: list[dict[str, Any]]) -> None:
+    """Append safety blog posts to today's daily buffer, deduplicating by URL."""
+    today = _today_jst()
+    _ensure_buffer_day(state, today)
+    existing = {p["url"] for p in state["daily_buffer"][today]["safety_posts"]}
+    for post in posts:
+        if post["url"] not in existing:
+            state["daily_buffer"][today]["safety_posts"].append(post)
+            existing.add(post["url"])
+
+
 def buffer_arxiv_papers(state: dict[str, Any], papers: list[dict[str, Any]]) -> None:
     """Append keyword-matched arXiv papers to today's buffer, deduplicating by ID."""
     today = _today_jst()
@@ -226,17 +238,20 @@ def peek_buffer(state: dict[str, Any]) -> dict[str, list[Any]]:
     all_blog: list[dict[str, Any]] = []
     all_arxiv: list[dict[str, Any]] = []
     all_linked: list[dict[str, Any]] = []
+    all_safety: list[dict[str, Any]] = []
 
     for date_key in sorted(buf.keys()):
         day = buf[date_key]
         all_blog.extend(day.get("blog_posts", []))
         all_arxiv.extend(day.get("arxiv_papers", []))
         all_linked.extend(day.get("linked_papers", []))
+        all_safety.extend(day.get("safety_posts", []))
 
     return {
         "blog_posts": all_blog,
         "arxiv_papers": all_arxiv,
         "linked_papers": all_linked,
+        "safety_posts": all_safety,
     }
 
 

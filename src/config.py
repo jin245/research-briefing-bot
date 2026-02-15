@@ -54,6 +54,8 @@ _DEFAULT_BLOG_FEEDS: dict[str, str] = {
     "OpenAI": "https://openai.com/blog/rss.xml",
 }
 
+_DEFAULT_SAFETY_FEEDS: dict[str, str] = {}
+
 _DEFAULT_KEYWORDS: list[tuple[str, re.Pattern[str]]] = [
     ("Google", re.compile(r"\bGoogle\b", re.IGNORECASE)),
     ("DeepMind", re.compile(r"\bDeepMind\b", re.IGNORECASE)),
@@ -99,7 +101,7 @@ def _compile_keywords(raw: list[dict]) -> list[tuple[str, re.Pattern[str]]]:
 
 
 def _load_tracking_config() -> (
-    tuple[list[str], dict[str, str], list[tuple[str, re.Pattern[str]]]]
+    tuple[list[str], dict[str, str], dict[str, str], list[tuple[str, re.Pattern[str]]]]
 ):
     """Load tracking config from YAML, falling back to hardcoded defaults.
 
@@ -112,7 +114,7 @@ def _load_tracking_config() -> (
     if not config_path.exists():
         config_path = _PROJECT_ROOT / "config.example.yml"
     if not config_path.exists():
-        return _DEFAULT_CATEGORIES, _DEFAULT_BLOG_FEEDS, _DEFAULT_KEYWORDS
+        return _DEFAULT_CATEGORIES, _DEFAULT_BLOG_FEEDS, _DEFAULT_SAFETY_FEEDS, _DEFAULT_KEYWORDS
 
     with open(config_path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
@@ -138,6 +140,19 @@ def _load_tracking_config() -> (
                 raise ValueError(f"blog_feeds entry must have 'source' and 'url': {entry}")
             feeds[entry["source"]] = entry["url"]
 
+    # --- safety_feeds ---
+    raw_safety = data.get("safety_feeds")
+    if raw_safety is None:
+        safety_feeds = dict(_DEFAULT_SAFETY_FEEDS)
+    else:
+        if not isinstance(raw_safety, list):
+            raise ValueError("safety_feeds must be a list of {source, url} mappings")
+        safety_feeds: dict[str, str] = {}
+        for entry in raw_safety:
+            if not isinstance(entry, dict) or "source" not in entry or "url" not in entry:
+                raise ValueError(f"safety_feeds entry must have 'source' and 'url': {entry}")
+            safety_feeds[entry["source"]] = entry["url"]
+
     # --- keywords ---
     raw_keywords = data.get("keywords")
     if raw_keywords is None:
@@ -147,7 +162,7 @@ def _load_tracking_config() -> (
             raise ValueError("keywords must be a list of keyword entries")
         keywords = _compile_keywords(raw_keywords)
 
-    return categories, feeds, keywords
+    return categories, feeds, safety_feeds, keywords
 
 
-ARXIV_CATEGORIES, BLOG_FEEDS, KEYWORD_PATTERNS = _load_tracking_config()
+ARXIV_CATEGORIES, BLOG_FEEDS, SAFETY_FEEDS, KEYWORD_PATTERNS = _load_tracking_config()

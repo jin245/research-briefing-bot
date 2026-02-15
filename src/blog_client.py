@@ -10,7 +10,7 @@ from typing import Any
 import feedparser
 from dateutil.parser import parse as parse_date
 
-from config import BLOG_FEEDS, FETCH_HOURS
+from config import BLOG_FEEDS, FETCH_HOURS, SAFETY_FEEDS
 
 logger = logging.getLogger(__name__)
 
@@ -94,15 +94,15 @@ def _parse_entry(entry: dict[str, Any], source: str) -> dict[str, Any] | None:
     }
 
 
-def fetch_blog_posts() -> list[dict[str, Any]]:
-    """Fetch recent posts from all configured blog feeds.
+def _fetch_from_feeds(feeds: dict[str, str], label: str) -> list[dict[str, Any]]:
+    """Fetch recent posts from the given feeds.
 
     Returns a list of dicts with keys:
         title, url, source, published, summary, arxiv_ids
     """
     all_posts: list[dict[str, Any]] = []
 
-    for source, feed_url in BLOG_FEEDS.items():
+    for source, feed_url in feeds.items():
         try:
             feed = feedparser.parse(feed_url)
             if feed.bozo and not feed.entries:
@@ -122,5 +122,15 @@ def fetch_blog_posts() -> list[dict[str, Any]]:
             logger.warning("Failed to fetch feed for %s", source, exc_info=True)
             continue
 
-    logger.info("Fetched %d blog posts from %d feeds", len(all_posts), len(BLOG_FEEDS))
+    logger.info("Fetched %d %s posts from %d feeds", len(all_posts), label, len(feeds))
     return all_posts
+
+
+def fetch_blog_posts() -> list[dict[str, Any]]:
+    """Fetch recent posts from all configured blog feeds."""
+    return _fetch_from_feeds(BLOG_FEEDS, "blog")
+
+
+def fetch_safety_posts() -> list[dict[str, Any]]:
+    """Fetch recent posts from all configured AI safety feeds."""
+    return _fetch_from_feeds(SAFETY_FEEDS, "safety")
